@@ -1,37 +1,27 @@
 import { useState, useEffect, useCallback } from "react";
 
-interface Heartbeat {
-  ts: number;
-  status: string;
-}
-
-interface Snapshot {
-  ts: number;
-  image: string;
-}
-
-interface CatEvent {
-  ts: number;
-  on_sofa: boolean;
-  image: string;
-}
+interface Heartbeat { ts: number; status: string }
+interface Snapshot { ts: number; image: string }
+interface CatEvent { ts: number; on_sofa: boolean; image: string }
 
 function timeAgo(ts: number): string {
   const diff = Math.floor(Date.now() / 1000 - ts);
   if (diff < 5) return "just now";
-  if (diff < 60) return `${diff}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
+  if (diff < 60) return `${diff}s`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+  return `${Math.floor(diff / 86400)}d`;
 }
 
 function formatTime(ts: number): string {
-  return new Date(ts * 1000).toLocaleString("zh-CN", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
+  return new Date(ts * 1000).toLocaleTimeString("zh-CN", {
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+}
+
+function formatDate(ts: number): string {
+  return new Date(ts * 1000).toLocaleDateString("zh-CN", {
+    month: "short", day: "numeric",
   });
 }
 
@@ -41,7 +31,7 @@ export default function App() {
   const [events, setEvents] = useState<CatEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<CatEvent | null>(null);
   const [loading, setLoading] = useState(true);
-  const [now, setNow] = useState(Date.now());
+  const [, setTick] = useState(0);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -53,14 +43,9 @@ export default function App() {
       const hb = await hbRes.json();
       const snap = await snapRes.json();
       const ev = await evRes.json();
-
       setHeartbeat(hb.data ? (typeof hb.data === "string" ? JSON.parse(hb.data) : hb.data) : null);
       setSnapshot(snap.data ? (typeof snap.data === "string" ? JSON.parse(snap.data) : snap.data) : null);
-
-      const parsed = (ev.data || []).map((e: string | CatEvent) =>
-        typeof e === "string" ? JSON.parse(e) : e
-      );
-      setEvents(parsed);
+      setEvents((ev.data || []).map((e: string | CatEvent) => typeof e === "string" ? JSON.parse(e) : e));
     } catch (e) {
       console.error("Fetch error:", e);
     } finally {
@@ -70,211 +55,371 @@ export default function App() {
 
   useEffect(() => {
     fetchAll();
-    const timer = setInterval(fetchAll, 5000);
-    return () => clearInterval(timer);
+    const t1 = setInterval(fetchAll, 5000);
+    const t2 = setInterval(() => setTick(t => t + 1), 1000);
+    return () => { clearInterval(t1); clearInterval(t2); };
   }, [fetchAll]);
 
-  // Update "time ago" every second
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const isOnline = heartbeat && now / 1000 - heartbeat.ts < 180;
-  const sofaAlerts = events.filter((e) => e.on_sofa).length;
+  const isOnline = heartbeat && Date.now() / 1000 - heartbeat.ts < 180;
+  const sofaCount = events.filter(e => e.on_sofa).length;
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin" />
-          <span className="text-sm text-gray-500 tracking-wide">Connecting to camera...</span>
-        </div>
+      <div style={styles.loadingWrap}>
+        <div style={styles.spinner} />
+        <span style={styles.loadingText}>Connecting...</span>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-gray-100">
-      {/* Header */}
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-[#0a0a0f]/80 border-b border-white/5">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-lg">🐱</span>
-            <h1 className="text-base font-semibold tracking-tight">Cat Monitor</h1>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <div className="flex items-center gap-2 text-xs text-gray-400 bg-white/5 rounded-full px-3 py-1.5">
-              <span className="relative flex h-2 w-2">
-                {isOnline && (
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                )}
-                <span className={`relative inline-flex rounded-full h-2 w-2 ${isOnline ? "bg-emerald-400" : "bg-red-400"}`} />
-              </span>
-              {isOnline ? "Live" : "Offline"}
+    <div style={styles.root}>
+      {/* ── Header ── */}
+      <header style={styles.header}>
+        <div style={styles.headerInner}>
+          <div style={styles.headerLeft}>
+            <div style={styles.logoCircle}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5c-1-3.5-5-3.5-7-1s-2 7 1 9l6 5 6-5c3-2 3-6.5 1-9s-6-2.5-7 1z"/>
+              </svg>
             </div>
-            {heartbeat && (
-              <span className="text-[11px] text-gray-500">{timeAgo(heartbeat.ts)}</span>
-            )}
+            <div>
+              <h1 style={styles.title}>Cat Monitor</h1>
+              <p style={styles.subtitle}>Living Room Camera</p>
+            </div>
+          </div>
+          <div style={styles.statusBadge}>
+            <span style={{ ...styles.statusDot, backgroundColor: isOnline ? "#34d399" : "#f87171" }} />
+            <span style={{ color: isOnline ? "#34d399" : "#f87171", fontSize: 12, fontWeight: 500 }}>
+              {isOnline ? "Live" : "Offline"}
+            </span>
+            {heartbeat && <span style={styles.timeAgo}>{timeAgo(heartbeat.ts)}</span>}
           </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-        {/* Stats Row */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white/[0.03] rounded-2xl p-4 border border-white/5">
-            <div className="text-[11px] uppercase tracking-wider text-gray-500 mb-1">Status</div>
-            <div className={`text-lg font-semibold ${isOnline ? "text-emerald-400" : "text-red-400"}`}>
-              {isOnline ? "Monitoring" : "Disconnected"}
-            </div>
-          </div>
-          <div className="bg-white/[0.03] rounded-2xl p-4 border border-white/5">
-            <div className="text-[11px] uppercase tracking-wider text-gray-500 mb-1">Detections</div>
-            <div className="text-lg font-semibold">{events.length}</div>
-          </div>
-          <div className="bg-white/[0.03] rounded-2xl p-4 border border-white/5">
-            <div className="text-[11px] uppercase tracking-wider text-gray-500 mb-1">Sofa Alerts</div>
-            <div className={`text-lg font-semibold ${sofaAlerts > 0 ? "text-amber-400" : "text-gray-400"}`}>
-              {sofaAlerts}
-            </div>
-          </div>
-        </div>
-
-        {/* Live View */}
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wider">Live View</h2>
-            {snapshot && (
-              <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                {formatTime(snapshot.ts)}
-              </div>
-            )}
-          </div>
+      <main style={styles.main}>
+        {/* ── Live View Card ── */}
+        <section style={styles.liveCard}>
           {snapshot ? (
-            <div className="relative group rounded-2xl overflow-hidden bg-black border border-white/5">
+            <div style={styles.liveImageWrap}>
               <img
                 src={`data:image/jpeg;base64,${snapshot.image}`}
-                alt="Live camera"
-                className="w-full block transition-opacity duration-300"
+                alt="Live"
+                style={styles.liveImage}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              {/* Overlay controls */}
+              <div style={styles.liveOverlayTop}>
+                <div style={styles.liveBadge}>
+                  <span style={styles.recDot} />
+                  LIVE
+                </div>
+                <span style={styles.liveTime}>{formatTime(snapshot.ts)}</span>
+              </div>
             </div>
           ) : (
-            <div className="w-full aspect-video bg-white/[0.02] rounded-2xl border border-white/5 flex flex-col items-center justify-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-600">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                  <circle cx="12" cy="13" r="4" />
-                </svg>
-              </div>
-              <span className="text-xs text-gray-600">No signal</span>
+            <div style={styles.noSignal}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
+              <span style={{ color: "#444", fontSize: 13 }}>No Signal</span>
             </div>
           )}
         </section>
 
-        {/* Detection History */}
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wider">Detection History</h2>
-            {events.length > 0 && (
-              <span className="text-[11px] text-gray-600">{events.length} captures</span>
-            )}
+        {/* ── Stats ── */}
+        <div style={styles.statsRow}>
+          <div style={styles.statCard}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isOnline ? "#34d399" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+            <div>
+              <div style={styles.statValue}>{isOnline ? "Active" : "Down"}</div>
+              <div style={styles.statLabel}>Monitor</div>
+            </div>
           </div>
+          <div style={styles.statCard}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b8b8b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <div>
+              <div style={styles.statValue}>{events.length}</div>
+              <div style={styles.statLabel}>Detections</div>
+            </div>
+          </div>
+          <div style={styles.statCard}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={sofaCount > 0 ? "#fb923c" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <div>
+              <div style={{ ...styles.statValue, color: sofaCount > 0 ? "#fb923c" : "#e5e5e5" }}>{sofaCount}</div>
+              <div style={styles.statLabel}>Alerts</div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Timeline ── */}
+        <section>
+          <h2 style={styles.sectionTitle}>Activity</h2>
           {events.length === 0 ? (
-            <div className="bg-white/[0.02] rounded-2xl border border-white/5 p-8 text-center">
-              <div className="text-2xl mb-2">😺</div>
-              <p className="text-sm text-gray-500">No cats detected yet</p>
-              <p className="text-xs text-gray-600 mt-1">Events will appear here when a cat is spotted</p>
+            <div style={styles.emptyState}>
+              <p style={{ color: "#555", fontSize: 14 }}>No activity yet</p>
+              <p style={{ color: "#333", fontSize: 12, marginTop: 4 }}>
+                Events appear here when a cat is detected
+              </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              {events.map((ev, i) => (
-                <button
-                  key={i}
-                  onClick={() => setSelectedEvent(ev)}
-                  className="relative group rounded-xl overflow-hidden bg-white/[0.02] border border-white/5 hover:border-white/10 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <img
-                    src={`data:image/jpeg;base64,${ev.image}`}
-                    alt="Detection"
-                    className="w-full aspect-[4/3] object-cover"
-                  />
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-2.5 pt-8">
-                    <div className="flex items-center gap-1.5">
-                      {ev.on_sofa ? (
-                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-red-500/90 text-white">
-                          ON SOFA
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-500/80 text-white">
-                          OK
-                        </span>
-                      )}
-                    </div>
-                    <span className="block text-[10px] text-gray-400 mt-1">
-                      {formatTime(ev.ts)}
-                    </span>
+            <div style={styles.timeline}>
+              {events.map((ev, i) => {
+                const showDate = i === 0 || formatDate(ev.ts) !== formatDate(events[i - 1].ts);
+                return (
+                  <div key={i}>
+                    {showDate && <div style={styles.timelineDate}>{formatDate(ev.ts)}</div>}
+                    <button
+                      style={styles.timelineItem}
+                      onClick={() => setSelectedEvent(ev)}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = "rgba(255,255,255,0.04)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = "transparent"; }}
+                    >
+                      <img
+                        src={`data:image/jpeg;base64,${ev.image}`}
+                        alt=""
+                        style={styles.timelineThumb}
+                      />
+                      <div style={styles.timelineContent}>
+                        <div style={styles.timelineTop}>
+                          <span style={{ color: "#e5e5e5", fontSize: 14, fontWeight: 500 }}>
+                            Cat detected
+                          </span>
+                          <span style={{ color: "#555", fontSize: 12 }}>{formatTime(ev.ts)}</span>
+                        </div>
+                        <div style={styles.timelineBottom}>
+                          {ev.on_sofa ? (
+                            <span style={styles.alertTag}>On Sofa</span>
+                          ) : (
+                            <span style={styles.okTag}>Clear</span>
+                          )}
+                          <span style={{ color: "#444", fontSize: 11 }}>{timeAgo(ev.ts)} ago</span>
+                        </div>
+                      </div>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                        <path d="m9 18 6-6-6-6"/>
+                      </svg>
+                    </button>
                   </div>
-                </button>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
       </main>
 
-      {/* Modal */}
+      {/* ── Modal ── */}
       {selectedEvent && (
-        <div
-          className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-[fadeIn_150ms_ease-out]"
-          onClick={() => setSelectedEvent(null)}
-        >
-          <div
-            className="max-w-2xl w-full bg-[#12121a] rounded-2xl overflow-hidden border border-white/10 shadow-2xl animate-[scaleIn_200ms_ease-out]"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div style={styles.modalBackdrop} onClick={() => setSelectedEvent(null)}>
+          <div style={styles.modalCard} onClick={e => e.stopPropagation()}>
             <img
               src={`data:image/jpeg;base64,${selectedEvent.image}`}
-              alt="Detection detail"
-              className="w-full"
+              alt="Detail"
+              style={styles.modalImage}
             />
-            <div className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div style={styles.modalFooter}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 {selectedEvent.on_sofa ? (
-                  <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-red-500/90 text-white">
-                    ON SOFA
-                  </span>
+                  <span style={styles.alertTag}>On Sofa</span>
                 ) : (
-                  <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-500/80 text-white">
-                    Not on sofa
-                  </span>
+                  <span style={styles.okTag}>Clear</span>
                 )}
-                <span className="text-xs text-gray-500">{formatTime(selectedEvent.ts)}</span>
+                <span style={{ color: "#666", fontSize: 13 }}>
+                  {formatDate(selectedEvent.ts)} {formatTime(selectedEvent.ts)}
+                </span>
               </div>
               <button
+                style={styles.modalClose}
                 onClick={() => setSelectedEvent(null)}
-                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <path d="M18 6L6 18M6 6l12 12" />
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <path d="M18 6L6 18M6 6l12 12"/>
                 </svg>
               </button>
             </div>
           </div>
         </div>
       )}
-
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0 }
-          to { opacity: 1 }
-        }
-        @keyframes scaleIn {
-          from { opacity: 0; transform: scale(0.95) }
-          to { opacity: 1; transform: scale(1) }
-        }
-      `}</style>
     </div>
   );
 }
+
+/* ── Inline Styles (Apple Home + Linear) ── */
+const styles: Record<string, React.CSSProperties> = {
+  root: {
+    minHeight: "100vh",
+    background: "#09090b",
+    color: "#e5e5e5",
+    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif',
+    WebkitFontSmoothing: "antialiased",
+  },
+
+  // Loading
+  loadingWrap: {
+    minHeight: "100vh", background: "#09090b",
+    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16,
+  },
+  spinner: {
+    width: 24, height: 24, border: "2px solid #222", borderTopColor: "#666",
+    borderRadius: "50%", animation: "spin 0.8s linear infinite",
+  },
+  loadingText: { color: "#444", fontSize: 13, letterSpacing: 0.5 },
+
+  // Header
+  header: {
+    position: "sticky", top: 0, zIndex: 40,
+    backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
+    background: "rgba(9,9,11,0.85)",
+    borderBottom: "1px solid rgba(255,255,255,0.04)",
+  },
+  headerInner: {
+    maxWidth: 600, margin: "0 auto", padding: "14px 20px",
+    display: "flex", alignItems: "center", justifyContent: "space-between",
+  },
+  headerLeft: { display: "flex", alignItems: "center", gap: 12 },
+  logoCircle: {
+    width: 36, height: 36, borderRadius: 10,
+    background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.06)",
+    display: "flex", alignItems: "center", justifyContent: "center", color: "#888",
+  },
+  title: { fontSize: 15, fontWeight: 600, margin: 0, letterSpacing: -0.3 },
+  subtitle: { fontSize: 11, color: "#555", margin: 0, marginTop: 1 },
+
+  statusBadge: { display: "flex", alignItems: "center", gap: 6 },
+  statusDot: { width: 7, height: 7, borderRadius: "50%", flexShrink: 0 },
+  timeAgo: { color: "#444", fontSize: 11, marginLeft: 2 },
+
+  // Main
+  main: { maxWidth: 600, margin: "0 auto", padding: "20px 20px 40px" },
+
+  // Live Card
+  liveCard: {
+    borderRadius: 16, overflow: "hidden",
+    background: "#111", border: "1px solid rgba(255,255,255,0.06)",
+    marginBottom: 16,
+  },
+  liveImageWrap: { position: "relative" },
+  liveImage: { display: "block", width: "100%", height: "auto" },
+  liveOverlayTop: {
+    position: "absolute", top: 0, left: 0, right: 0,
+    padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "center",
+    background: "linear-gradient(to bottom, rgba(0,0,0,0.5), transparent)",
+  },
+  liveBadge: {
+    display: "flex", alignItems: "center", gap: 5,
+    fontSize: 10, fontWeight: 600, letterSpacing: 1, color: "#fff",
+    background: "rgba(0,0,0,0.5)", borderRadius: 6, padding: "3px 8px",
+  },
+  recDot: {
+    width: 6, height: 6, borderRadius: "50%", backgroundColor: "#ef4444",
+    animation: "pulse 2s ease-in-out infinite",
+  },
+  liveTime: { fontSize: 11, color: "rgba(255,255,255,0.7)", fontVariantNumeric: "tabular-nums" },
+  noSignal: {
+    aspectRatio: "16/9", display: "flex", flexDirection: "column",
+    alignItems: "center", justifyContent: "center", gap: 8,
+  },
+
+  // Stats
+  statsRow: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 24 },
+  statCard: {
+    display: "flex", alignItems: "center", gap: 10,
+    padding: "14px 12px", borderRadius: 14,
+    background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)",
+  },
+  statValue: { fontSize: 16, fontWeight: 600, color: "#e5e5e5", lineHeight: 1.2 },
+  statLabel: { fontSize: 11, color: "#555", marginTop: 1 },
+
+  // Section
+  sectionTitle: {
+    fontSize: 13, fontWeight: 600, color: "#666", letterSpacing: 0.5,
+    textTransform: "uppercase" as const, marginBottom: 12, marginTop: 0,
+  },
+
+  // Empty
+  emptyState: {
+    padding: "40px 20px", textAlign: "center" as const,
+    borderRadius: 14, border: "1px solid rgba(255,255,255,0.04)",
+    background: "rgba(255,255,255,0.01)",
+  },
+
+  // Timeline
+  timeline: { display: "flex", flexDirection: "column" as const },
+  timelineDate: {
+    fontSize: 11, fontWeight: 600, color: "#555", letterSpacing: 0.5,
+    padding: "8px 0", textTransform: "uppercase" as const,
+    borderBottom: "1px solid rgba(255,255,255,0.04)",
+  },
+  timelineItem: {
+    display: "flex", alignItems: "center", gap: 12,
+    padding: "10px 4px", width: "100%",
+    background: "transparent", border: "none", cursor: "pointer",
+    borderBottom: "1px solid rgba(255,255,255,0.03)",
+    transition: "background 0.15s", textAlign: "left" as const,
+  },
+  timelineThumb: {
+    width: 52, height: 52, borderRadius: 10, objectFit: "cover" as const,
+    border: "1px solid rgba(255,255,255,0.06)", flexShrink: 0,
+  },
+  timelineContent: { flex: 1, minWidth: 0 },
+  timelineTop: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
+  timelineBottom: { display: "flex", alignItems: "center", gap: 8 },
+
+  alertTag: {
+    fontSize: 10, fontWeight: 600, letterSpacing: 0.3,
+    padding: "2px 7px", borderRadius: 5,
+    background: "rgba(239,68,68,0.15)", color: "#f87171",
+  },
+  okTag: {
+    fontSize: 10, fontWeight: 600, letterSpacing: 0.3,
+    padding: "2px 7px", borderRadius: 5,
+    background: "rgba(52,211,153,0.1)", color: "#34d399",
+  },
+
+  // Modal
+  modalBackdrop: {
+    position: "fixed" as const, inset: 0, zIndex: 50,
+    background: "rgba(0,0,0,0.92)", backdropFilter: "blur(8px)",
+    display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+    animation: "fadeIn 0.15s ease-out",
+  },
+  modalCard: {
+    maxWidth: 560, width: "100%",
+    background: "#111", borderRadius: 16,
+    overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)",
+    boxShadow: "0 25px 50px rgba(0,0,0,0.5)",
+    animation: "scaleIn 0.2s ease-out",
+  },
+  modalImage: { display: "block", width: "100%" },
+  modalFooter: {
+    padding: "12px 16px", display: "flex",
+    alignItems: "center", justifyContent: "space-between",
+  },
+  modalClose: {
+    width: 32, height: 32, borderRadius: "50%",
+    background: "rgba(255,255,255,0.05)", border: "none",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    color: "#888", cursor: "pointer",
+  },
+};
+
+// Global keyframes
+const styleSheet = document.createElement("style");
+styleSheet.textContent = `
+  @keyframes spin { to { transform: rotate(360deg) } }
+  @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+  @keyframes scaleIn { from { opacity: 0; transform: scale(0.96) } to { opacity: 1; transform: scale(1) } }
+  @keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.4 } }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { margin: 0; background: #09090b; }
+  button:focus-visible { outline: 1px solid rgba(255,255,255,0.2); outline-offset: 2px; }
+`;
+document.head.appendChild(styleSheet);

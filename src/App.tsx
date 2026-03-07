@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 
 interface Heartbeat { ts: number; status: string }
 interface Snapshot { ts: number; image: string }
-interface CatEvent { ts: number; on_sofa: boolean; image: string }
+interface Step { name: string; status: string; detail: string }
+interface CatEvent { ts: number; on_sofa?: boolean; image: string; steps?: Step[] }
 
 function timeAgo(ts: number): string {
   const diff = Math.floor(Date.now() / 1000 - ts);
@@ -61,7 +62,14 @@ export default function App() {
   }, [fetchAll]);
 
   const isOnline = heartbeat && Date.now() / 1000 - heartbeat.ts < 180;
-  const sofaCount = events.filter(e => e.on_sofa).length;
+  const isOnSofa = (ev: CatEvent) => {
+    if (ev.steps) {
+      const gemini = ev.steps.find(s => s.name === "gemini");
+      return gemini?.status === "done";
+    }
+    return ev.on_sofa ?? false;
+  };
+  const sofaCount = events.filter(isOnSofa).length;
 
   if (loading) {
     return (
@@ -196,10 +204,20 @@ export default function App() {
                           <span style={{ color: "#555", fontSize: 12 }}>{formatTime(ev.ts)}</span>
                         </div>
                         <div style={styles.timelineBottom}>
-                          {ev.on_sofa ? (
+                          {isOnSofa(ev) ? (
                             <span style={styles.alertTag}>On Sofa</span>
                           ) : (
                             <span style={styles.okTag}>Clear</span>
+                          )}
+                          {ev.steps && (
+                            <span style={styles.stepDots}>
+                              {ev.steps.map((s, j) => (
+                                <span key={j} style={{
+                                  ...styles.stepDotInline,
+                                  backgroundColor: s.status === "done" ? "#34d399" : s.status === "error" ? "#f87171" : "#333",
+                                }} title={`${s.name}: ${s.detail}`} />
+                              ))}
+                            </span>
                           )}
                           <span style={{ color: "#444", fontSize: 11 }}>{timeAgo(ev.ts)} ago</span>
                         </div>
@@ -227,7 +245,7 @@ export default function App() {
             />
             <div style={styles.modalFooter}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                {selectedEvent.on_sofa ? (
+                {isOnSofa(selectedEvent) ? (
                   <span style={styles.alertTag}>On Sofa</span>
                 ) : (
                   <span style={styles.okTag}>Clear</span>
@@ -245,12 +263,48 @@ export default function App() {
                 </svg>
               </button>
             </div>
+            {/* Pipeline Steps */}
+            {selectedEvent.steps && (
+              <div style={styles.stepsWrap}>
+                {selectedEvent.steps.map((step, i) => (
+                  <div key={i} style={styles.stepRow}>
+                    <div style={{
+                      ...styles.stepIcon,
+                      backgroundColor: step.status === "done" ? "rgba(52,211,153,0.15)" : step.status === "error" ? "rgba(248,113,113,0.15)" : "rgba(255,255,255,0.04)",
+                      color: step.status === "done" ? "#34d399" : step.status === "error" ? "#f87171" : "#555",
+                    }}>
+                      {step.status === "done" ? (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                      ) : step.status === "error" ? (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                      ) : (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14"/></svg>
+                      )}
+                    </div>
+                    {i < (selectedEvent.steps?.length ?? 0) - 1 && <div style={styles.stepLine} />}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 12, fontWeight: 500, color: "#ccc", textTransform: "capitalize" as const }}>
+                        {STEP_LABELS[step.name] || step.name}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#555", marginTop: 1 }}>{step.detail}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
     </div>
   );
 }
+
+const STEP_LABELS: Record<string, string> = {
+  detect: "IMX500 Detection",
+  gemini: "Gemini Analysis",
+  sound: "Deterrent Sound",
+  discord: "Discord Alert",
+};
 
 /* ── Inline Styles (Apple Home + Linear) ── */
 const styles: Record<string, React.CSSProperties> = {
@@ -408,6 +462,29 @@ const styles: Record<string, React.CSSProperties> = {
     background: "rgba(255,255,255,0.05)", border: "none",
     display: "flex", alignItems: "center", justifyContent: "center",
     color: "#888", cursor: "pointer",
+  },
+
+  // Steps in modal
+  stepsWrap: {
+    padding: "0 16px 16px", display: "flex", flexDirection: "column" as const, gap: 0,
+  },
+  stepRow: {
+    display: "flex", alignItems: "center", gap: 10,
+    padding: "8px 0", position: "relative" as const,
+  },
+  stepIcon: {
+    width: 24, height: 24, borderRadius: 8, flexShrink: 0,
+    display: "flex", alignItems: "center", justifyContent: "center",
+  },
+  stepLine: {
+    position: "absolute" as const, left: 11.5, top: 32, width: 1, height: 8,
+    background: "rgba(255,255,255,0.06)",
+  },
+
+  // Step dots in timeline
+  stepDots: { display: "flex", alignItems: "center", gap: 3 },
+  stepDotInline: {
+    width: 5, height: 5, borderRadius: "50%", display: "inline-block",
   },
 };
 

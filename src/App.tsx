@@ -68,7 +68,7 @@ export default function App() {
 
   useEffect(() => {
     fetchAll();
-    const timer = setInterval(fetchAll, 15000);
+    const timer = setInterval(fetchAll, 5000);
     return () => clearInterval(timer);
   }, [fetchAll]);
 

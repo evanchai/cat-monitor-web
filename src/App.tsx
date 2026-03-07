@@ -4,6 +4,7 @@ interface Heartbeat { ts: number; status: string; scans?: number; detections?: n
 interface Snapshot { ts: number; image: string }
 interface Step { name: string; status: string; detail: string }
 interface CatEvent { ts: number; on_sofa?: boolean; image: string; steps?: Step[] }
+interface Summary { ts: number; date: string; summary: string; count: number }
 
 function timeAgo(ts: number): string {
   const diff = Math.floor(Date.now() / 1000 - ts);
@@ -27,10 +28,14 @@ function formatDate(ts: number): string {
 }
 
 export default function App() {
+  const [authed, setAuthed] = useState(() => sessionStorage.getItem("cat_auth") === "1");
+  const [pwInput, setPwInput] = useState("");
+  const [pwError, setPwError] = useState(false);
   const [heartbeat, setHeartbeat] = useState<Heartbeat | null>(null);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [events, setEvents] = useState<CatEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<CatEvent | null>(null);
+  const [summary, setSummary] = useState<Summary | null>(null);
   const [showLogs, setShowLogs] = useState(false);
   const [loading, setLoading] = useState(true);
   const [, setTick] = useState(0);
@@ -47,14 +52,17 @@ export default function App() {
 
   const fetchMeta = useCallback(async () => {
     try {
-      const [hbRes, evRes] = await Promise.all([
+      const [hbRes, evRes, sumRes] = await Promise.all([
         fetch("/api/status?type=heartbeat"),
         fetch("/api/status?type=events"),
+        fetch("/api/status?type=summary"),
       ]);
       const hb = await hbRes.json();
       const ev = await evRes.json();
+      const sum = await sumRes.json();
       setHeartbeat(hb.data ? (typeof hb.data === "string" ? JSON.parse(hb.data) : hb.data) : null);
       setEvents((ev.data || []).map((e: string | CatEvent) => typeof e === "string" ? JSON.parse(e) : e));
+      setSummary(sum.data ? (typeof sum.data === "string" ? JSON.parse(sum.data) : sum.data) : null);
     } catch (e) {
       console.error("Meta fetch error:", e);
     } finally {
@@ -86,6 +94,32 @@ export default function App() {
       <div style={styles.loadingWrap}>
         <div style={styles.spinner} />
         <span style={styles.loadingText}>Connecting...</span>
+      </div>
+    );
+  }
+
+  if (!authed) {
+    return (
+      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0a0a0a"}}>
+        <div style={{textAlign:"center",color:"#fff"}}>
+          <div style={{fontSize:"2rem",marginBottom:"1rem"}}>🐱</div>
+          <div style={{fontSize:"0.85rem",color:"#888",marginBottom:"1rem",letterSpacing:"0.1em"}}>CAT MONITOR</div>
+          <input
+            type="password"
+            value={pwInput}
+            onChange={e => { setPwInput(e.target.value); setPwError(false); }}
+            onKeyDown={e => {
+              if (e.key === "Enter") {
+                if (pwInput === "101230") { sessionStorage.setItem("cat_auth","1"); setAuthed(true); }
+                else { setPwError(true); setPwInput(""); }
+              }
+            }}
+            placeholder="password"
+            autoFocus
+            style={{background:"#1a1a1a",border:`1px solid ${pwError?"#ff4444":"#333"}`,borderRadius:"8px",padding:"10px 16px",color:"#fff",fontSize:"14px",outline:"none",textAlign:"center",letterSpacing:"0.15em"}}
+          />
+          {pwError && <div style={{color:"#ff4444",fontSize:"12px",marginTop:"8px"}}>wrong password</div>}
+        </div>
       </div>
     );
   }
@@ -176,6 +210,23 @@ export default function App() {
             </div>
           </div>
         </div>
+
+        {/* ── Daily Summary ── */}
+        {summary && (
+          <section style={styles.summaryCard}>
+            <div style={styles.summaryHeader}>
+              <h2 style={{ ...styles.sectionTitle, marginBottom: 0 }}>Daily Summary</h2>
+              <span style={styles.summaryDate}>{summary.date} · {summary.count} sightings</span>
+            </div>
+            <div style={styles.summaryBody}>
+              {summary.summary.split("\n").map((line, i) => (
+                <p key={i} style={{ margin: line.trim() ? "4px 0" : "8px 0", minHeight: line.trim() ? undefined : 1 }}>
+                  {line}
+                </p>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ── Timeline ── */}
         <section style={{ marginBottom: 24 }}>
@@ -426,6 +477,17 @@ const styles: Record<string, React.CSSProperties> = {
   },
   statValue: { fontSize: 16, fontWeight: 600, color: "#e5e5e5", lineHeight: 1.2 },
   statLabel: { fontSize: 11, color: "#555", marginTop: 1 },
+
+  // Summary card
+  summaryCard: {
+    marginBottom: 24, borderRadius: 14, padding: "16px",
+    background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)",
+  },
+  summaryHeader: {
+    display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12,
+  },
+  summaryDate: { fontSize: 11, color: "#555" },
+  summaryBody: { fontSize: 13, color: "#aaa", lineHeight: 1.7 },
 
   // Section
   sectionTitle: {

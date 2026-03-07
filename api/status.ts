@@ -49,7 +49,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json({ data: data.map((e: string) => JSON.parse(e)) });
     }
 
-    return res.status(400).json({ error: "Invalid type. Use: heartbeat, snapshot, events" });
+    if (type === "summary") {
+      const data = await redisGet("cat:summary");
+      return res.json({ data: data ? JSON.parse(data) : null });
+    }
+
+    return res.status(400).json({ error: "Invalid type. Use: heartbeat, snapshot, events, summary" });
   } catch (err) {
     console.error("API error:", err);
     return res.status(500).json({ error: "Internal server error" });

@@ -137,8 +137,8 @@ export default function App() {
               </svg>
             </div>
             <div>
-              <h1 style={styles.title}>Cat Monitor</h1>
-              <p style={styles.subtitle}>Living Room Camera</p>
+              <h1 style={styles.title}>Sofa Policy</h1>
+              <p style={styles.subtitle}>犯我沙发者 虽远必诛</p>
             </div>
           </div>
           <div style={styles.statusBadge}>

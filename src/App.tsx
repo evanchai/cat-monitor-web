@@ -37,6 +37,7 @@ export default function App() {
   const [selectedEvent, setSelectedEvent] = useState<CatEvent | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [showLogs, setShowLogs] = useState(false);
+  const [soundSent, setSoundSent] = useState(false);
   const [loading, setLoading] = useState(true);
   const [, setTick] = useState(0);
 
@@ -167,19 +168,27 @@ export default function App() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <button
-                    style={styles.playBtn}
-                    onClick={async () => {
+                    style={{ ...styles.playBtn, opacity: soundSent ? 0.5 : 1 }}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (soundSent) return;
+                      setSoundSent(true);
                       try {
                         await fetch("/api/status?type=play_sound", { method: "POST" });
                       } catch {}
+                      setTimeout(() => setSoundSent(false), 3000);
                     }}
                     title="Play deterrent sound"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-                    </svg>
+                    {soundSent ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                      </svg>
+                    )}
                   </button>
                   <span style={styles.liveTime}>{formatTime(snapshot.ts)}</span>
                 </div>
@@ -481,10 +490,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   liveTime: { fontSize: 11, color: "rgba(255,255,255,0.7)", fontVariantNumeric: "tabular-nums" },
   playBtn: {
-    width: 32, height: 32, borderRadius: 8,
-    background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.2)",
+    width: 36, height: 36, borderRadius: 8,
+    background: "rgba(239,68,68,0.7)", border: "1px solid rgba(255,255,255,0.3)",
     display: "flex", alignItems: "center", justifyContent: "center",
-    color: "#fff", cursor: "pointer", backdropFilter: "blur(8px)",
+    color: "#fff", cursor: "pointer", position: "relative" as const, zIndex: 10,
   },
   noSignal: {
     aspectRatio: "16/9", display: "flex", flexDirection: "column",

@@ -34,32 +34,41 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [, setTick] = useState(0);
 
-  const fetchAll = useCallback(async () => {
+  const fetchSnapshot = useCallback(async () => {
     try {
-      const [hbRes, snapRes, evRes] = await Promise.all([
+      const res = await fetch("/api/status?type=snapshot");
+      const snap = await res.json();
+      setSnapshot(snap.data ? (typeof snap.data === "string" ? JSON.parse(snap.data) : snap.data) : null);
+    } catch (e) {
+      console.error("Snapshot fetch error:", e);
+    }
+  }, []);
+
+  const fetchMeta = useCallback(async () => {
+    try {
+      const [hbRes, evRes] = await Promise.all([
         fetch("/api/status?type=heartbeat"),
-        fetch("/api/status?type=snapshot"),
         fetch("/api/status?type=events"),
       ]);
       const hb = await hbRes.json();
-      const snap = await snapRes.json();
       const ev = await evRes.json();
       setHeartbeat(hb.data ? (typeof hb.data === "string" ? JSON.parse(hb.data) : hb.data) : null);
-      setSnapshot(snap.data ? (typeof snap.data === "string" ? JSON.parse(snap.data) : snap.data) : null);
       setEvents((ev.data || []).map((e: string | CatEvent) => typeof e === "string" ? JSON.parse(e) : e));
     } catch (e) {
-      console.error("Fetch error:", e);
+      console.error("Meta fetch error:", e);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchAll();
-    const t1 = setInterval(fetchAll, 5000);
-    const t2 = setInterval(() => setTick(t => t + 1), 1000);
-    return () => { clearInterval(t1); clearInterval(t2); };
-  }, [fetchAll]);
+    fetchSnapshot();
+    fetchMeta();
+    const t1 = setInterval(fetchSnapshot, 1000);  // live view every 1s
+    const t2 = setInterval(fetchMeta, 10000);      // heartbeat + events every 10s
+    const t3 = setInterval(() => setTick(t => t + 1), 1000);
+    return () => { clearInterval(t1); clearInterval(t2); clearInterval(t3); };
+  }, [fetchSnapshot, fetchMeta]);
 
   const isOnline = heartbeat && Date.now() / 1000 - heartbeat.ts < 180;
   const isOnSofa = (ev: CatEvent) => {

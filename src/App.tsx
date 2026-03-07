@@ -31,6 +31,7 @@ export default function App() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [events, setEvents] = useState<CatEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<CatEvent | null>(null);
+  const [showLogs, setShowLogs] = useState(false);
   const [loading, setLoading] = useState(true);
   const [, setTick] = useState(0);
 
@@ -108,9 +109,8 @@ export default function App() {
           <div style={styles.statusBadge}>
             <span style={{ ...styles.statusDot, backgroundColor: isOnline ? "#34d399" : "#f87171" }} />
             <span style={{ color: isOnline ? "#34d399" : "#f87171", fontSize: 12, fontWeight: 500 }}>
-              {isOnline ? "Live" : "Offline"}
+              {isOnline ? "Online" : "Offline"}
             </span>
-            {heartbeat && <span style={styles.timeAgo}>{timeAgo(heartbeat.ts)}</span>}
           </div>
         </div>
       </header>
@@ -177,20 +177,8 @@ export default function App() {
           </div>
         </div>
 
-        {/* ── Logs ── */}
-        {heartbeat?.logs && heartbeat.logs.length > 0 && (
-          <section style={{ marginBottom: 24 }}>
-            <h2 style={styles.sectionTitle}>Monitor Log</h2>
-            <div style={styles.logPanel}>
-              {heartbeat.logs.map((line, i) => (
-                <div key={i} style={styles.logLine}>{line}</div>
-              ))}
-            </div>
-          </section>
-        )}
-
         {/* ── Timeline ── */}
-        <section>
+        <section style={{ marginBottom: 24 }}>
           <h2 style={styles.sectionTitle}>Activity</h2>
           {events.length === 0 ? (
             <div style={styles.emptyState}>
@@ -253,6 +241,32 @@ export default function App() {
             </div>
           )}
         </section>
+
+        {/* ── Logs (collapsible) ── */}
+        {heartbeat?.logs && heartbeat.logs.length > 0 && (
+          <section>
+            <button
+              style={styles.logToggle}
+              onClick={() => setShowLogs(v => !v)}
+            >
+              <h2 style={{ ...styles.sectionTitle, marginBottom: 0 }}>Monitor Log</h2>
+              <svg
+                width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                style={{ transform: showLogs ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s" }}
+              >
+                <path d="m6 9 6 6 6-6"/>
+              </svg>
+            </button>
+            {showLogs && (
+              <div style={styles.logPanel}>
+                {heartbeat.logs.map((line, i) => (
+                  <div key={i} style={styles.logLine}>{line}</div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
       </main>
 
       {/* ── Modal ── */}
@@ -510,6 +524,11 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 11, lineHeight: 1.8,
   },
   logLine: { color: "#888", whiteSpace: "pre" as const },
+  logToggle: {
+    display: "flex", alignItems: "center", justifyContent: "space-between",
+    width: "100%", padding: "0 0 12px", background: "none", border: "none",
+    cursor: "pointer", color: "inherit",
+  },
 
   // Step dots in timeline
   stepDots: { display: "flex", alignItems: "center", gap: 3 },

@@ -41,7 +41,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (type === "events") {
-      // Use GET path for LRANGE — Upstash POST doesn't return large list data properly
       const resp = await fetch(`${REDIS_URL}/LRANGE/cat:events/0/19`, {
         headers: { Authorization: `Bearer ${REDIS_TOKEN}` },
       });

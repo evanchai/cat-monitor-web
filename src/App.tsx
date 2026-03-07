@@ -165,7 +165,24 @@ export default function App() {
                   <span style={styles.recDot} />
                   LIVE
                 </div>
-                <span style={styles.liveTime}>{formatTime(snapshot.ts)}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <button
+                    style={styles.playBtn}
+                    onClick={async () => {
+                      try {
+                        await fetch("/api/status?type=play_sound", { method: "POST" });
+                      } catch {}
+                    }}
+                    title="Play deterrent sound"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                    </svg>
+                  </button>
+                  <span style={styles.liveTime}>{formatTime(snapshot.ts)}</span>
+                </div>
               </div>
             </div>
           ) : (
@@ -463,6 +480,12 @@ const styles: Record<string, React.CSSProperties> = {
     animation: "pulse 2s ease-in-out infinite",
   },
   liveTime: { fontSize: 11, color: "rgba(255,255,255,0.7)", fontVariantNumeric: "tabular-nums" },
+  playBtn: {
+    width: 32, height: 32, borderRadius: 8,
+    background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.2)",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    color: "#fff", cursor: "pointer", backdropFilter: "blur(8px)",
+  },
   noSignal: {
     aspectRatio: "16/9", display: "flex", flexDirection: "column",
     alignItems: "center", justifyContent: "center", gap: 8,

@@ -25,10 +25,20 @@ async function redisPost(...args: (string | number)[]) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
-
   try {
     const type = req.query.type as string;
+
+    // POST: trigger actions
+    if (req.method === "POST") {
+      if (type === "play_sound") {
+        await redisPost("SET", "cat:play_sound", "1");
+        await redisPost("EXPIRE", "cat:play_sound", "10");
+        return res.json({ ok: true });
+      }
+      return res.status(400).json({ error: "Invalid POST type" });
+    }
+
+    if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
 
     if (type === "heartbeat") {
       const data = await redisGet("cat:heartbeat");

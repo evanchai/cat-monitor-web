@@ -137,7 +137,7 @@ export default function App() {
               </svg>
             </div>
             <div>
-              <h1 style={styles.title}>Sofa Policy</h1>
+              <h1 style={styles.title}>Sofa Police</h1>
               <p style={styles.subtitle}>犯我沙发者 虽远必诛</p>
             </div>
           </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 
-interface Heartbeat { ts: number; status: string }
+interface Heartbeat { ts: number; status: string; scans?: number; detections?: number; logs?: string[] }
 interface Snapshot { ts: number; image: string }
 interface Step { name: string; status: string; detail: string }
 interface CatEvent { ts: number; on_sofa?: boolean; image: string; steps?: Step[] }
@@ -167,6 +167,18 @@ export default function App() {
             </div>
           </div>
         </div>
+
+        {/* ── Logs ── */}
+        {heartbeat?.logs && heartbeat.logs.length > 0 && (
+          <section style={{ marginBottom: 24 }}>
+            <h2 style={styles.sectionTitle}>Monitor Log</h2>
+            <div style={styles.logPanel}>
+              {heartbeat.logs.map((line, i) => (
+                <div key={i} style={styles.logLine}>{line}</div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ── Timeline ── */}
         <section>
@@ -480,6 +492,15 @@ const styles: Record<string, React.CSSProperties> = {
     position: "absolute" as const, left: 11.5, top: 32, width: 1, height: 8,
     background: "rgba(255,255,255,0.06)",
   },
+
+  // Log panel
+  logPanel: {
+    background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)",
+    borderRadius: 12, padding: "10px 14px", maxHeight: 180, overflowY: "auto" as const,
+    fontFamily: '"SF Mono", "Fira Code", "Cascadia Code", monospace',
+    fontSize: 11, lineHeight: 1.8,
+  },
+  logLine: { color: "#888", whiteSpace: "pre" as const },
 
   // Step dots in timeline
   stepDots: { display: "flex", alignItems: "center", gap: 3 },

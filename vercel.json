@@ -3,7 +3,7 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
-    { "source": "/xhs/:path*", "destination": "/xhs/:path*" },
+    { "source": "/xhs", "destination": "/xhs.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [{

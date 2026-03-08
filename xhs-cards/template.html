@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>XHS Vibe Coding 日记卡片</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&family=Noto+Sans+SC:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:   #f0ebe4;
+      --bg2:  #e7e0d6;
+      --card: #f6f2ec;
+      --t1:   #2e2b26;
+      --t2:   #6d665c;
+      --t3:   #a69e94;
+      --g1:   #5e7050;
+      --g2:   #7a9469;
+      --line: #d4ccc2;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #d4ccc2;
+      font-family: 'Noto Sans SC', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 32px;
+      padding: 40px 20px;
+    }
+
+    .card {
+      width: 390px;
+      height: 553px;
+      border-radius: 2px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+    }
+
+    .card-body {
+      flex: 1;
+      padding: 40px 32px 20px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Footer ── */
+    .card-footer {
+      padding: 14px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--t3);
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Typography ── */
+    .display {
+      font-family: 'Fraunces', serif;
+      color: var(--t1);
+    }
+
+    .label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--t3);
+    }
+
+    .body-text {
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 14px;
+      line-height: 1.8;
+      color: var(--t2);
+    }
+
+    .quote {
+      font-family: 'Fraunces', serif;
+      font-style: italic;
+      font-size: 15px;
+      color: var(--g1);
+      line-height: 1.6;
+    }
+
+    .divider {
+      width: 32px;
+      height: 1px;
+      background: var(--line);
+      margin: 16px 0;
+    }
+
+    .tag {
+      display: inline-block;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--g1);
+      border: 1px solid var(--g1);
+      border-radius: 3px;
+      padding: 3px 8px;
+    }
+
+    /* ── Card 01: Cover ── */
+    .card-01 { background: var(--bg); }
+    .card-01 .card-body {
+      justify-content: center;
+      gap: 20px;
+    }
+    .card-01 .cover-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--g1);
+    }
+    .card-01 .cover-title {
+      font-family: 'Fraunces', serif;
+      font-size: 26px;
+      font-weight: 500;
+      line-height: 1.4;
+      color: var(--t1);
+    }
+    .card-01 .cover-subtitle {
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--t2);
+    }
+    .card-01 .cover-subject {
+      margin-top: auto;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+    }
+    .card-01 .cover-subject .label {
+      margin-bottom: 4px;
+    }
+    .card-01 .cover-subject-name {
+      font-family: 'Fraunces', serif;
+      font-size: 16px;
+      color: var(--t1);
+    }
+
+    /* ── Card 02: Story ── */
+    .card-02 { background: var(--card); }
+    .card-02 .card-body {
+      gap: 16px;
+    }
+    .card-02 .story-title {
+      font-family: 'Fraunces', serif;
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--t1);
+      line-height: 1.4;
+    }
+    .card-02 .story-quote {
+      padding-left: 16px;
+      border-left: 2px solid var(--g1);
+    }
+    .card-02 .story-reason {
+      margin-top: auto;
+      padding: 14px 16px;
+      background: var(--bg);
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--t2);
+      line-height: 1.7;
+    }
+    .card-02 .story-reason::before {
+      content: "💡 ";
+    }
+
+    /* ── Card 03: Tools ── */
+    .card-03 { background: var(--bg2); }
+    .card-03 .card-body {
+      gap: 12px;
+    }
+    .card-03 .tools-title {
+      font-family: 'Fraunces', serif;
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--t1);
+      margin-bottom: 4px;
+    }
+    .tool-item {
+      padding: 16px;
+      background: var(--card);
+      border-radius: 10px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+    .tool-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .tool-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--t1);
+      margin-bottom: 2px;
+    }
+    .tool-desc {
+      font-size: 12px;
+      color: var(--t2);
+      line-height: 1.6;
+    }
+
+    /* ── Card 04: How it works ── */
+    .card-04 { background: var(--card); }
+    .card-04 .card-body {
+      gap: 16px;
+    }
+    .card-04 .how-title {
+      font-family: 'Fraunces', serif;
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--t1);
+      line-height: 1.4;
+    }
+    .step-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin-top: 4px;
+    }
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .step-item:last-child {
+      border-bottom: none;
+    }
+    .step-num {
+      font-family: 'Fraunces', serif;
+      font-size: 22px;
+      font-weight: 300;
+      color: var(--g1);
+      line-height: 1;
+      min-width: 24px;
+      padding-top: 2px;
+    }
+    .step-text {
+      font-size: 14px;
+      color: var(--t1);
+      line-height: 1.5;
+      flex: 1;
+    }
+    .step-check {
+      color: var(--g2);
+      font-size: 14px;
+      flex-shrink: 0;
+      padding-top: 2px;
+    }
+
+    /* ── Card 05: Results ── */
+    .card-05 { background: var(--bg); }
+    .card-05 .card-body {
+      gap: 16px;
+    }
+    .card-05 .result-title {
+      font-family: 'Fraunces', serif;
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--t1);
+      line-height: 1.4;
+    }
+    .result-story {
+      font-size: 14px;
+      color: var(--t2);
+      line-height: 1.8;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+    .stat-box {
+      padding: 16px 12px;
+      background: var(--card);
+      border-radius: 10px;
+      text-align: center;
+    }
+    .stat-num {
+      font-family: 'Fraunces', serif;
+      font-size: 24px;
+      font-weight: 500;
+      color: var(--g1);
+      line-height: 1.2;
+    }
+    .stat-label {
+      font-size: 11px;
+      color: var(--t3);
+      margin-top: 4px;
+    }
+    .result-quote {
+      margin-top: auto;
+      padding-left: 16px;
+      border-left: 2px solid var(--g1);
+    }
+
+    /* ── Card 06: Ending ── */
+    .card-06 { background: var(--bg2); }
+    .card-06 .card-body {
+      justify-content: center;
+      gap: 20px;
+    }
+    .card-06 .ending-msg {
+      font-family: 'Fraunces', serif;
+      font-size: 22px;
+      font-weight: 500;
+      color: var(--t1);
+      line-height: 1.5;
+    }
+    .card-06 .ending-tools {
+      padding: 16px;
+      background: var(--card);
+      border-radius: 10px;
+    }
+    .card-06 .ending-tools-title {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--t3);
+      margin-bottom: 10px;
+    }
+    .card-06 .ending-tools-list {
+      font-size: 13px;
+      color: var(--t2);
+      line-height: 2;
+    }
+    .card-06 .ending-next {
+      padding: 14px 16px;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--t2);
+      line-height: 1.7;
+    }
+    .card-06 .ending-next::before {
+      content: "👀 下期预告：";
+      color: var(--t1);
+      font-weight: 500;
+    }
+    .card-06 .ending-cta {
+      margin-top: auto;
+      text-align: center;
+    }
+    .card-06 .ending-follow {
+      display: inline-block;
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: var(--g1);
+      border: 1.5px solid var(--g1);
+      border-radius: 20px;
+      padding: 8px 24px;
+    }
+
+    /* ── Print / Screenshot helper ── */
+    @media print {
+      body { background: white; gap: 0; padding: 0; }
+      .card { break-inside: avoid; page-break-after: always; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========== 01 封面 ========== -->
+  <div class="card card-01">
+    <div class="card-body">
+      <div class="cover-label">vibe coding 日记</div>
+      <h1 class="cover-title">{{COVER_TITLE}}</h1>
+      <p class="cover-subtitle">{{COVER_SUBTITLE}}</p>
+      <div class="cover-subject">
+        <div class="label">今日主角</div>
+        <div class="cover-subject-name">{{COVER_SUBJECT}}</div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span>ning.codes</span>
+      <span>01/06</span>
+    </div>
+  </div>
+
+  <!-- ========== 02 起因 ========== -->
+  <div class="card card-02">
+    <div class="card-body">
+      <div class="label">起因</div>
+      <h2 class="story-title">{{STORY_TITLE}}</h2>
+      <div class="divider"></div>
+      <p class="body-text">{{STORY_BODY}}</p>
+      <div class="story-quote">
+        <p class="quote">{{STORY_QUOTE}}</p>
+      </div>
+      <div class="story-reason">{{STORY_REASON}}</div>
+    </div>
+    <div class="card-footer">
+      <span>ning.codes</span>
+      <span>02/06</span>
+    </div>
+  </div>
+
+  <!-- ========== 03 用了啥 ========== -->
+  <div class="card card-03">
+    <div class="card-body">
+      <div class="label">工具箱</div>
+      <h2 class="tools-title">我用了这三样东西</h2>
+      <div class="tool-item">
+        <div class="tool-icon">🧠</div>
+        <div>
+          <div class="tool-name">{{TOOL1_NAME}}</div>
+          <div class="tool-desc">{{TOOL1_DESC}}</div>
+        </div>
+      </div>
+      <div class="tool-item">
+        <div class="tool-icon">📷</div>
+        <div>
+          <div class="tool-name">{{TOOL2_NAME}}</div>
+          <div class="tool-desc">{{TOOL2_DESC}}</div>
+        </div>
+      </div>
+      <div class="tool-item">
+        <div class="tool-icon">🖥️</div>
+        <div>
+          <div class="tool-name">{{TOOL3_NAME}}</div>
+          <div class="tool-desc">{{TOOL3_DESC}}</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span>ning.codes</span>
+      <span>03/06</span>
+    </div>
+  </div>
+
+  <!-- ========== 04 怎么运作 ========== -->
+  <div class="card card-04">
+    <div class="card-body">
+      <div class="label">怎么运作</div>
+      <h2 class="how-title">{{HOW_TITLE}}</h2>
+      <div class="divider"></div>
+      <div class="step-list">
+        <div class="step-item">
+          <span class="step-num">1</span>
+          <span class="step-text">{{STEP1}}</span>
+          <span class="step-check">✓</span>
+        </div>
+        <div class="step-item">
+          <span class="step-num">2</span>
+          <span class="step-text">{{STEP2}}</span>
+          <span class="step-check">✓</span>
+        </div>
+        <div class="step-item">
+          <span class="step-num">3</span>
+          <span class="step-text">{{STEP3}}</span>
+          <span class="step-check">✓</span>
+        </div>
+        <div class="step-item">
+          <span class="step-num">4</span>
+          <span class="step-text">{{STEP4}}</span>
+          <span class="step-check">✓</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span>ning.codes</span>
+      <span>04/06</span>
+    </div>
+  </div>
+
+  <!-- ========== 05 效果 ========== -->
+  <div class="card card-05">
+    <div class="card-body">
+      <div class="label">效果</div>
+      <h2 class="result-title">第一次成功的时候</h2>
+      <p class="result-story">{{RESULT_STORY}}</p>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-num">{{STAT1_NUM}}</div>
+          <div class="stat-label">{{STAT1_LABEL}}</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num">{{STAT2_NUM}}</div>
+          <div class="stat-label">{{STAT2_LABEL}}</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num">{{STAT3_NUM}}</div>
+          <div class="stat-label">{{STAT3_LABEL}}</div>
+        </div>
+      </div>
+      <div class="result-quote">
+        <p class="quote">{{RESULT_QUOTE}}</p>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span>ning.codes</span>
+      <span>05/06</span>
+    </div>
+  </div>
+
+  <!-- ========== 06 收尾 ========== -->
+  <div class="card card-06">
+    <div class="card-body">
+      <div class="label">最后</div>
+      <p class="ending-msg">{{ENDING_MSG}}</p>
+      <div class="ending-tools">
+        <div class="ending-tools-title">本期工具</div>
+        <div class="ending-tools-list">{{ENDING_TOOLS}}</div>
+      </div>
+      <div class="ending-next">{{ENDING_NEXT}}</div>
+      <div class="ending-cta">
+        <span class="ending-follow">关注 ning.codes →</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span>ning.codes</span>
+      <span>06/06</span>
+    </div>
+  </div>
+
+</body>
+</html>

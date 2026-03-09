@@ -9,6 +9,13 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      if (window.location.pathname === '/xhs') {
+        fetch('/xhs.html').then(function(r){return r.text()}).then(function(h){
+          document.open();document.write(h);document.close();
+        });
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

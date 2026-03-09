@@ -1,5 +1,10 @@
 {
-  "cleanUrls": true,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/xhs", "destination": "/xhs.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
   "headers": [{
     "source": "/(.*)",
     "headers": [

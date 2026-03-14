@@ -174,7 +174,10 @@ export default function App() {
                       if (soundSent) return;
                       setSoundSent(true);
                       try {
-                        await fetch("/api/status?type=play_sound", { method: "POST" });
+                        await fetch("/api/status?type=play_sound", {
+                          method: "POST",
+                          headers: { "Authorization": `Bearer ${import.meta.env.VITE_ADMIN_TOKEN || ""}` },
+                        });
                       } catch {}
                       setTimeout(() => setSoundSent(false), 3000);
                     }}

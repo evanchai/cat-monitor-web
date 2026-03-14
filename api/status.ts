@@ -28,8 +28,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const type = req.query.type as string;
 
-    // POST: trigger actions
+    // POST: trigger actions (auth required)
     if (req.method === "POST") {
+      const auth = req.headers.authorization;
+      if (!auth || !auth.startsWith("Bearer ") || auth.slice(7) !== process.env.ADMIN_TOKEN) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
       if (type === "play_sound") {
         await redisPost("SET", "cat:play_sound", "1");
         await redisPost("EXPIRE", "cat:play_sound", "10");

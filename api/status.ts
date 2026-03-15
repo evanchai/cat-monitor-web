@@ -1,27 +1,40 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-const REDIS_URL = process.env.KV_REST_API_URL!;
-const REDIS_TOKEN = process.env.KV_REST_API_TOKEN!;
+const SUPABASE_URL = process.env.SUPABASE_URL!;
+const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY!;
 
-async function redisGet(key: string) {
-  const resp = await fetch(`${REDIS_URL}/GET/${encodeURIComponent(key)}`, {
-    headers: { Authorization: `Bearer ${REDIS_TOKEN}` },
-  });
-  const json = await resp.json();
-  return json.result;
+const headers = {
+  apikey: SUPABASE_KEY,
+  Authorization: `Bearer ${SUPABASE_KEY}`,
+};
+
+async function getState(key: string) {
+  const resp = await fetch(
+    `${SUPABASE_URL}/rest/v1/cat_state?key=eq.${key}&select=value`,
+    { headers }
+  );
+  const rows = await resp.json();
+  return rows?.[0]?.value ?? null;
 }
 
-async function redisPost(...args: (string | number)[]) {
-  const resp = await fetch(REDIS_URL, {
+async function upsertState(key: string, value: unknown) {
+  const resp = await fetch(`${SUPABASE_URL}/rest/v1/cat_state`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${REDIS_TOKEN}`,
+      ...headers,
       "Content-Type": "application/json",
+      Prefer: "resolution=merge-duplicates",
     },
-    body: JSON.stringify(args.map(String)),
+    body: JSON.stringify({ key, value }),
   });
-  const json = await resp.json();
-  return json.result;
+  return resp.ok;
+}
+
+async function deleteState(key: string) {
+  await fetch(`${SUPABASE_URL}/rest/v1/cat_state?key=eq.${key}`, {
+    method: "DELETE",
+    headers,
+  });
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -36,8 +49,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       if (type === "play_sound") {
-        await redisPost("SET", "cat:play_sound", "1");
-        await redisPost("EXPIRE", "cat:play_sound", "10");
+        await upsertState("play_sound", { triggered: true, ts: Date.now() / 1000 });
         return res.json({ ok: true });
       }
       return res.status(400).json({ error: "Invalid POST type" });
@@ -46,27 +58,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
 
     if (type === "heartbeat") {
-      const data = await redisGet("cat:heartbeat");
-      return res.json({ data: data ? JSON.parse(data) : null });
+      const data = await getState("heartbeat");
+      return res.json({ data });
     }
 
     if (type === "snapshot") {
-      const data = await redisGet("cat:snapshot");
-      return res.json({ data: data ? JSON.parse(data) : null });
+      const data = await getState("snapshot");
+      return res.json({ data });
     }
 
     if (type === "events") {
-      const resp = await fetch(`${REDIS_URL}/LRANGE/cat:events/0/19`, {
-        headers: { Authorization: `Bearer ${REDIS_TOKEN}` },
-      });
-      const json = await resp.json();
-      const data = json.result || [];
-      return res.json({ data: data.map((e: string) => JSON.parse(e)) });
+      const data = await getState("events");
+      return res.json({ data: data || [] });
     }
 
     if (type === "summary") {
-      const data = await redisGet("cat:summary");
-      return res.json({ data: data ? JSON.parse(data) : null });
+      const data = await getState("summary");
+      return res.json({ data });
     }
 
     return res.status(400).json({ error: "Invalid type. Use: heartbeat, snapshot, events, summary" });

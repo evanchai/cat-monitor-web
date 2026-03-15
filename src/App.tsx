@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 
 interface Heartbeat { ts: number; status: string; scans?: number; detections?: number; logs?: string[] }
-interface Snapshot { ts: number; image: string }
+const SNAPSHOT_URL = "https://xmcxxmayooclhuosvcpz.supabase.co/storage/v1/object/public/cat-monitor/latest.jpg";
 interface Step { name: string; status: string; detail: string }
 interface CatEvent { ts: number; on_sofa?: boolean; image: string; steps?: Step[] }
 interface Summary { ts: number; date: string; summary: string; count: number }
@@ -32,7 +32,7 @@ export default function App() {
   const [pwInput, setPwInput] = useState("");
   const [pwError, setPwError] = useState(false);
   const [heartbeat, setHeartbeat] = useState<Heartbeat | null>(null);
-  const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  const [snapshotKey, setSnapshotKey] = useState(Date.now());
   const [events, setEvents] = useState<CatEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<CatEvent | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -40,16 +40,6 @@ export default function App() {
   const [soundSent, setSoundSent] = useState(false);
   const [loading, setLoading] = useState(true);
   const [, setTick] = useState(0);
-
-  const fetchSnapshot = useCallback(async () => {
-    try {
-      const res = await fetch("/api/status?type=snapshot");
-      const snap = await res.json();
-      setSnapshot(snap.data ?? null);
-    } catch (e) {
-      console.error("Snapshot fetch error:", e);
-    }
-  }, []);
 
   const fetchMeta = useCallback(async () => {
     try {
@@ -72,15 +62,15 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    fetchSnapshot();
     fetchMeta();
-    const t1 = setInterval(fetchSnapshot, 3000);  // live view every 3s
+    const t1 = setInterval(() => setSnapshotKey(Date.now()), 10000); // refresh snapshot every 10s
     const t2 = setInterval(fetchMeta, 10000);      // heartbeat + events every 10s
     const t3 = setInterval(() => setTick(t => t + 1), 1000);
     return () => { clearInterval(t1); clearInterval(t2); clearInterval(t3); };
-  }, [fetchSnapshot, fetchMeta]);
+  }, [fetchMeta]);
 
-  const isOnline = heartbeat && Date.now() / 1000 - heartbeat.ts < 180;
+  const isOnline = heartbeat && Date.now() / 1000 - heartbeat.ts < 120;
+  const snapshotSrc = `${SNAPSHOT_URL}?t=${snapshotKey}`;
   const isOnSofa = (ev: CatEvent) => {
     if (ev.steps) {
       const gemini = ev.steps.find(s => s.name === "gemini");
@@ -153,59 +143,60 @@ export default function App() {
       <main style={styles.main}>
         {/* ── Live View Card ── */}
         <section style={styles.liveCard}>
-          {snapshot ? (
-            <div style={styles.liveImageWrap}>
-              <img
-                src={`data:image/jpeg;base64,${snapshot.image}`}
-                alt="Live"
-                style={styles.liveImage}
-              />
-              {/* Overlay controls */}
-              <div style={styles.liveOverlayTop}>
-                <div style={styles.liveBadge}>
-                  <span style={styles.recDot} />
-                  LIVE
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <button
-                    style={{ ...styles.playBtn, opacity: soundSent ? 0.5 : 1 }}
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      if (soundSent) return;
-                      setSoundSent(true);
-                      try {
-                        await fetch("/api/status?type=play_sound", {
-                          method: "POST",
-                          headers: { "Authorization": `Bearer ${import.meta.env.VITE_ADMIN_TOKEN || ""}` },
-                        });
-                      } catch {}
-                      setTimeout(() => setSoundSent(false), 3000);
-                    }}
-                    title="Play deterrent sound"
-                  >
-                    {soundSent ? (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
-                    ) : (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-                      </svg>
-                    )}
-                  </button>
-                  <span style={styles.liveTime}>{formatTime(snapshot.ts)}</span>
-                </div>
+          <div style={styles.liveImageWrap}>
+            <img
+              src={snapshotSrc}
+              alt="Live"
+              style={styles.liveImage}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              onLoad={(e) => { (e.target as HTMLImageElement).style.display = "block"; }}
+            />
+            {/* Overlay controls */}
+            <div style={styles.liveOverlayTop}>
+              <div style={styles.liveBadge}>
+                <span style={styles.recDot} />
+                LIVE
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <button
+                  style={{ ...styles.playBtn, opacity: soundSent ? 0.5 : 1 }}
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (soundSent) return;
+                    setSoundSent(true);
+                    try {
+                      await fetch("/api/status?type=play_sound", {
+                        method: "POST",
+                        headers: { "Authorization": `Bearer ${import.meta.env.VITE_ADMIN_TOKEN || ""}` },
+                      });
+                    } catch {}
+                    setTimeout(() => setSoundSent(false), 3000);
+                  }}
+                  title="Play deterrent sound"
+                >
+                  {soundSent ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                    </svg>
+                  )}
+                </button>
+                <button
+                  style={{ ...styles.playBtn, background: "rgba(255,255,255,0.2)" }}
+                  onClick={() => setSnapshotKey(Date.now())}
+                  title="Refresh snapshot"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+                    <path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+                  </svg>
+                </button>
               </div>
             </div>
-          ) : (
-            <div style={styles.noSignal}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                <circle cx="12" cy="13" r="4"/>
-              </svg>
-              <span style={{ color: "#444", fontSize: 13 }}>No Signal</span>
-            </div>
-          )}
+          </div>
         </section>
 
         {/* ── Stats ── */}

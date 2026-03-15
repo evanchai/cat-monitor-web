@@ -62,11 +62,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json({ data });
     }
 
-    if (type === "snapshot") {
-      const data = await getState("snapshot");
-      return res.json({ data });
-    }
-
     if (type === "events") {
       const data = await getState("events");
       return res.json({ data: data || [] });

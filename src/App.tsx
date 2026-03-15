@@ -194,6 +194,7 @@ export default function App() {
                     <path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
                   </svg>
                 </button>
+                {heartbeat && <span style={styles.liveTime}>{formatTime(heartbeat.ts)}</span>}
               </div>
             </div>
           </div>

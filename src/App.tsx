@@ -45,7 +45,7 @@ export default function App() {
     try {
       const res = await fetch("/api/status?type=snapshot");
       const snap = await res.json();
-      setSnapshot(snap.data ? (typeof snap.data === "string" ? JSON.parse(snap.data) : snap.data) : null);
+      setSnapshot(snap.data ?? null);
     } catch (e) {
       console.error("Snapshot fetch error:", e);
     }
@@ -61,9 +61,9 @@ export default function App() {
       const hb = await hbRes.json();
       const ev = await evRes.json();
       const sum = await sumRes.json();
-      setHeartbeat(hb.data ? (typeof hb.data === "string" ? JSON.parse(hb.data) : hb.data) : null);
-      setEvents((ev.data || []).map((e: string | CatEvent) => typeof e === "string" ? JSON.parse(e) : e));
-      setSummary(sum.data ? (typeof sum.data === "string" ? JSON.parse(sum.data) : sum.data) : null);
+      setHeartbeat(hb.data ?? null);
+      setEvents(ev.data || []);
+      setSummary(sum.data ?? null);
     } catch (e) {
       console.error("Meta fetch error:", e);
     } finally {
@@ -74,7 +74,7 @@ export default function App() {
   useEffect(() => {
     fetchSnapshot();
     fetchMeta();
-    const t1 = setInterval(fetchSnapshot, 1000);  // live view every 1s
+    const t1 = setInterval(fetchSnapshot, 3000);  // live view every 3s
     const t2 = setInterval(fetchMeta, 10000);      // heartbeat + events every 10s
     const t3 = setInterval(() => setTick(t => t + 1), 1000);
     return () => { clearInterval(t1); clearInterval(t2); clearInterval(t3); };
